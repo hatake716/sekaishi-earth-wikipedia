@@ -34,6 +34,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var showFilter by mutableStateOf(false)
     var showList by mutableStateOf(false)
     var showAbout by mutableStateOf(false)
+
+    /** 年代の数値入力ダイアログ。null=非表示、true=上端(新しい年)編集、false=下端(古い年)編集。 */
+    var editYearUpper by mutableStateOf<Boolean?>(null)
     var detailExpanded by mutableStateOf(false)
 
     /** カメラの復元用(度、高度)。 */

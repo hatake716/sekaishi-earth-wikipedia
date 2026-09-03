@@ -1,6 +1,7 @@
 package io.github.hatake716.sekaishiearth.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
@@ -47,6 +49,8 @@ fun YearRangeBar(
     maxYear: Int,
     modifier: Modifier = Modifier,
     onRangeChange: (Int, Int) -> Unit,
+    onEditUpper: () -> Unit = {},
+    onEditLower: () -> Unit = {},
 ) {
     val span = (maxYear - minYear).toFloat().coerceAtLeast(1f)
     fun toFrac(y: Int) = ((y - minYear) / span).coerceIn(0f, 1f)
@@ -80,13 +84,17 @@ fun YearRangeBar(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // 上端(最新)の年ラベル
+        // 上端(最新)の年ラベル。タップで数値入力。
         Text(
             text = if (hi >= 0.999f) "現在" else formatYear(yearAt(hi)),
             color = onSurface,
             fontSize = 10.sp,
             textAlign = TextAlign.Center,
-            modifier = Modifier.width(52.dp),
+            modifier = Modifier
+                .width(52.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .clickable(onClick = onEditUpper)
+                .padding(vertical = 2.dp),
         )
         Spacer(Modifier.height(4.dp))
 
@@ -144,13 +152,17 @@ fun YearRangeBar(
         }
 
         Spacer(Modifier.height(4.dp))
-        // 下端(最古)の年ラベル
+        // 下端(最古)の年ラベル。タップで数値入力。
         Text(
             text = if (lo <= 0.001f) "最古" else formatYear(yearAt(lo)),
             color = onSurface,
             fontSize = 10.sp,
             textAlign = TextAlign.Center,
-            modifier = Modifier.width(52.dp),
+            modifier = Modifier
+                .width(52.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .clickable(onClick = onEditLower)
+                .padding(vertical = 2.dp),
         )
     }
 }
@@ -189,3 +201,4 @@ private fun Modifier.heightPx(px: Float): Modifier =
         val placeable = measurable.measure(constraints.copy(minHeight = h, maxHeight = h))
         layout(placeable.width, h) { placeable.place(0, 0) }
     })
+

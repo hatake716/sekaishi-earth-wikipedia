@@ -220,10 +220,10 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
         }
     }
 
-    // ---- 右端: 年代レンジバー(縦) ----
+    // ---- 右下: 年代レンジバー(縦)。ラベルをタップすると数値入力。 ----
     AnimatedVisibility(
         visible = selected == null,
-        modifier = Modifier.align(Alignment.CenterEnd),
+        modifier = Modifier.align(Alignment.BottomEnd),
         enter = fadeIn(), exit = fadeOut(),
     ) {
         val shown = remember(vm.filter, catalog) { catalog.entries.count { vm.filter.accepts(it) } }
@@ -233,9 +233,9 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
             tonalElevation = 3.dp,
             shadowElevation = 4.dp,
             modifier = Modifier
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(end = 8.dp)
-                .height(360.dp),
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(end = 8.dp, bottom = 24.dp)
+                .height(340.dp),
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -252,6 +252,8 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
                     onRangeChange = { lo, hi ->
                         vm.filter = vm.filter.copy(yearMin = lo, yearMax = hi)
                     },
+                    onEditUpper = { vm.editYearUpper = true },
+                    onEditLower = { vm.editYearUpper = false },
                 )
                 if (vm.filter.yearMin != Int.MIN_VALUE || vm.filter.yearMax != Int.MAX_VALUE) {
                     Spacer(Modifier.height(2.dp))
@@ -264,6 +266,19 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
                 }
             }
         }
+    }
+
+    // 年代の数値入力ダイアログ
+    vm.editYearUpper?.let { upper ->
+        YearInputDialog(
+            upper = upper,
+            currentYearMin = vm.filter.yearMin,
+            currentYearMax = vm.filter.yearMax,
+            minYear = -3500,
+            maxYear = 2030,
+            onDismiss = { vm.editYearUpper = null },
+            onConfirm = { lo, hi -> vm.filter = vm.filter.copy(yearMin = lo, yearMax = hi) },
+        )
     }
 
     // ---- 左下(ボタン列の下): 件数と出典 ----
