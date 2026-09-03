@@ -227,25 +227,34 @@ class GlobeView(
         cam.update()
         val g = grab
         val cur = cam.screenToLatLon(sx, sy)
-        var dLat: Double
-        var dLon: Double
+        var dLat = 0.0
+        var dLon = 0.0
         if (g != null && cur != null) {
-            dLat = g[0] - cur[0]
-            dLon = Camera.wrapLon(g[1] - cur[1])
+            val lat0 = cam.centerLat
+            val lon0 = cam.centerLon
+            // 緯度経度の差分で近似し、数回反復して指の下の地点を一致させる
+            for (k in 0 until 3) {
+                val c = if (k == 0) cur else (cam.screenToLatLon(sx, sy) ?: break)
+                cam.centerLat += g[0] - c[0]
+                cam.centerLon += Camera.wrapLon(g[1] - c[1])
+                cam.clamp()
+                cam.update()
+            }
             // 極付近での暴走を抑える
-            val limit = cam.radiansPerPixel() * 80 * density
-            dLat = dLat.coerceIn(-limit, limit)
-            dLon = dLon.coerceIn(-limit * 3, limit * 3)
+            val limit = cam.radiansPerPixel() * 120 * density
+            dLat = (cam.centerLat - lat0).coerceIn(-limit, limit)
+            dLon = Camera.wrapLon(cam.centerLon - lon0).coerceIn(-limit * 3, limit * 3)
+            cam.centerLat = lat0 + dLat
+            cam.centerLon = lon0 + dLon
         } else {
             val rpp = cam.radiansPerPixel()
             dLat = dy * rpp
             dLon = -dx * rpp / max(cos(cam.centerLat), 0.2)
+            cam.centerLat += dLat
+            cam.centerLon += dLon
             grab = null
         }
-        cam.centerLat += dLat
-        cam.centerLon += dLon
         cam.clamp()
-        if (g != null && cur == null) grab = null
         val dt = dtMs / 1000.0
         val a = 0.5
         velLat = velLat * (1 - a) + (dLat / dt) * a
@@ -261,15 +270,18 @@ class GlobeView(
         val before = grab ?: cam.screenToLatLon(fx, fy)
         cam.altitude = (cam.altitude / scale).coerceIn(Camera.MIN_ALT, Camera.MAX_ALT)
         cam.update()
-        val after = cam.screenToLatLon(fx, fy)
-        if (before != null && after != null) {
-            cam.centerLat += before[0] - after[0]
-            cam.centerLon += Camera.wrapLon(before[1] - after[1])
-            cam.clamp()
+        if (before != null) {
+            for (k in 0 until 3) {
+                val after = cam.screenToLatLon(fx, fy) ?: break
+                cam.centerLat += before[0] - after[0]
+                cam.centerLon += Camera.wrapLon(before[1] - after[1])
+                cam.clamp()
+                cam.update()
+            }
+            grab = before
+        } else {
+            grab = cam.screenToLatLon(fx, fy)
         }
-        // 焦点の下の地表点を保持(更新後の状態で再取得)
-        cam.update()
-        grab = cam.screenToLatLon(fx, fy)?.let { doubleArrayOf(before?.get(0) ?: it[0], before?.get(1) ?: it[1]) }
     }
 
     companion object {

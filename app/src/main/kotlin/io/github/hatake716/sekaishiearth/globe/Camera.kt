@@ -1,6 +1,5 @@
 package io.github.hatake716.sekaishiearth.globe
 
-import android.opengl.Matrix
 import kotlin.math.PI
 import kotlin.math.acos
 import kotlin.math.asin
@@ -58,13 +57,13 @@ class Camera {
         val aspect = viewportWidth.toDouble() / viewportHeight
         val near = max(altitude * 0.05, 0.0004)
         val far = altitude + 2.5
-        Matrix.perspectiveM(projection, 0, Math.toDegrees(fovY).toFloat(), aspect.toFloat(), near.toFloat(), far.toFloat())
-        Matrix.setLookAtM(view, 0, 0f, 0f, (1.0 + altitude).toFloat(), 0f, 0f, 0f, 0f, 1f, 0f)
-        Matrix.setIdentityM(model, 0)
-        Matrix.rotateM(model, 0, Math.toDegrees(centerLat).toFloat(), 1f, 0f, 0f)
-        Matrix.rotateM(model, 0, Math.toDegrees(-centerLon).toFloat(), 0f, 1f, 0f)
-        Matrix.multiplyMM(viewProjection, 0, projection, 0, view, 0)
-        Matrix.multiplyMM(mvp, 0, viewProjection, 0, model, 0)
+        Mat4.perspective(projection, Math.toDegrees(fovY).toFloat(), aspect.toFloat(), near.toFloat(), far.toFloat())
+        Mat4.lookAtFromZ(view, (1.0 + altitude).toFloat())
+        Mat4.identity(model)
+        Mat4.rotateX(model, Math.toDegrees(centerLat))
+        Mat4.rotateY(model, Math.toDegrees(-centerLon))
+        Mat4.multiply(viewProjection, projection, view)
+        Mat4.multiply(mvp, viewProjection, model)
         // カメラ位置を地球座標系へ: model の逆回転 = Ry(lon) * Rx(-lat) を (0,0,1+alt) に適用
         val d = 1.0 + altitude
         val y1 = d * sin(centerLat)
