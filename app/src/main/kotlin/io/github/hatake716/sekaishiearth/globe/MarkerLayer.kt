@@ -30,17 +30,25 @@ class MarkerSnapshot(
     val ids: IntArray,
     val xs: FloatArray,
     val ys: FloatArray,
+    /** 代表ピン(ラベル付きの大きいピン)なら true。小さな点は false。 */
+    val reps: BooleanArray,
     val count: Int,
     val altitude: Double,
 ) {
-    /** (sx, sy) から radius px 以内のエントリ ID を近い順に返す。 */
+    /**
+     * (sx, sy) から radius px 以内のエントリ ID を近い順に返す。
+     * 代表ピンに当たっている場合はそれらを優先し、間引かれた小さな点は指のごく近く(radius/3)のものだけ含める。
+     */
     fun pick(sx: Float, sy: Float, radius: Float): List<Int> {
-        val hits = ArrayList<Pair<Float, Int>>()
+        val hits = ArrayList<Triple<Float, Int, Boolean>>()
         for (i in 0 until count) {
             val d = hypot(xs[i] - sx, ys[i] - sy)
-            if (d <= radius) hits.add(d to ids[i])
+            if (d <= radius) hits.add(Triple(d, ids[i], reps[i]))
         }
-        return hits.sortedBy { it.first }.map { it.second }
+        if (hits.isEmpty()) return emptyList()
+        val anyRep = hits.any { it.third }
+        val filtered = if (anyRep) hits.filter { it.third || it.first <= radius / 3 } else hits
+        return filtered.sortedBy { it.first }.map { it.second }
     }
 }
 
@@ -78,7 +86,7 @@ class MarkerLayer(private val entries: List<Entry>, private val density: Float) 
     class Label(val id: Int, val x: Float, val y: Float, val text: String, val priority: Int, val left: Boolean = false)
     val labels = ArrayList<Label>()
 
-    @Volatile var snapshot: MarkerSnapshot = MarkerSnapshot(IntArray(0), FloatArray(0), FloatArray(0), 0, 0.0)
+    @Volatile var snapshot: MarkerSnapshot = MarkerSnapshot(IntArray(0), FloatArray(0), FloatArray(0), BooleanArray(0), 0, 0.0)
         private set
 
     private val tmp = FloatArray(3)
@@ -87,6 +95,7 @@ class MarkerLayer(private val entries: List<Entry>, private val density: Float) 
     private val snapIds = IntArray(n)
     private val snapXs = FloatArray(n)
     private val snapYs = FloatArray(n)
+    private val snapReps = BooleanArray(n)
     /** 重要度降順→目次順に並べた添字。表示順・代表選出はこの順で走査すれば済む。 */
     private val priorityOrder: IntArray
     private val visIdx = IntArray(n)
@@ -227,17 +236,17 @@ class MarkerLayer(private val entries: List<Entry>, private val density: Float) 
                 md[k++] = 5f * density; md[k++] = 0f
                 md[k++] = c.red; md[k++] = c.green; md[k++] = c.blue; md[k++] = 0.75f
             }
-            snapIds[snapCount] = e.id; snapXs[snapCount] = visX[o]; snapYs[snapCount] = visY[o]; snapCount++
+            snapIds[snapCount] = e.id; snapXs[snapCount] = visX[o]; snapYs[snapCount] = visY[o]; snapReps[snapCount] = rep; snapCount++
         }
         if (!selX.isNaN()) {
             val e = entries.first { it.id == sel }
             val c = e.category.color
             md[k++] = selX; md[k++] = selY; md[k++] = 30f * density; md[k++] = 2f
             md[k++] = c.red; md[k++] = c.green; md[k++] = c.blue; md[k++] = 1f
-            snapIds[snapCount] = e.id; snapXs[snapCount] = selX; snapYs[snapCount] = selY; snapCount++
+            snapIds[snapCount] = e.id; snapXs[snapCount] = selX; snapYs[snapCount] = selY; snapReps[snapCount] = true; snapCount++
             if (labels.none { it.id == sel }) labels.add(0, Label(e.id, selX, selY, e.term, 9))
         }
         markerCount = k / 8
-        snapshot = MarkerSnapshot(snapIds.copyOf(snapCount), snapXs.copyOf(snapCount), snapYs.copyOf(snapCount), snapCount, camera.altitude)
+        snapshot = MarkerSnapshot(snapIds.copyOf(snapCount), snapXs.copyOf(snapCount), snapYs.copyOf(snapCount), snapReps.copyOf(snapCount), snapCount, camera.altitude)
     }
 }
