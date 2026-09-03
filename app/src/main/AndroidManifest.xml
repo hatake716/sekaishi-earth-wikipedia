@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Wikipedia / 世界史の窓 の記事をアプリ内 WebView で表示するため -->
+    <!-- Wikipedia の記事と YouTube の検索結果をアプリ内 WebView で表示するため -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
