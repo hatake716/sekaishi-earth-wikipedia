@@ -135,7 +135,14 @@ class GlobeView(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        // 先に自前のドラッグ/ピンチ処理(ACTION_DOWN でアニメーション停止)を行い、その後に
+        // GestureDetector を呼ぶ。逆順だとダブルタップの flyTo が直後の stopAnimations で消される。
+        handleTouch(event)
         gestures.onTouchEvent(event)
+        return true
+    }
+
+    private fun handleTouch(event: MotionEvent) {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 mode = Mode.DRAG
@@ -222,7 +229,6 @@ class GlobeView(
                 grab = null
             }
         }
-        return true
     }
 
     private fun dist(e: MotionEvent): Float = hypot(e.getX(0) - e.getX(1), e.getY(0) - e.getY(1))
