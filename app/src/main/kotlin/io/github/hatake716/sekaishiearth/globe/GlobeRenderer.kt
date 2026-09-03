@@ -52,6 +52,7 @@ class GlobeRenderer(
     private var starBuffer: FloatBuffer? = null
     private var starCount = 0
     private var quadBuffer: FloatBuffer? = null
+    private var glowQuad: FloatBuffer? = null
     private var markerBuffer: FloatBuffer? = null
     private var frame = 0L
     private var lastFrameNanos = 0L
@@ -102,6 +103,7 @@ class GlobeRenderer(
         tiles.onSurfaceCreated()
         buildStars()
         quadBuffer = floatBufferOf(floatArrayOf(0f, 0f, 1f, 0f, 0f, 1f, 1f, 1f))
+        glowQuad = floatBufferOf(floatArrayOf(-1f, -1f, 1f, -1f, -1f, 1f, 1f, 1f))
         markerBuffer = ByteBuffer.allocateDirect(markers.markerData.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
         lastFrameNanos = System.nanoTime()
     }
@@ -245,7 +247,8 @@ class GlobeRenderer(
         GLES20.glUniform1f(GLES20.glGetUniformLocation(glowProgram, "uSize"), size)
         GLES20.glUniform1f(GLES20.glGetUniformLocation(glowProgram, "uInner"), (r0 / size).toFloat())
         val aPos = GLES20.glGetAttribLocation(glowProgram, "aPos")
-        val quad = floatBufferOf(floatArrayOf(-1f, -1f, 1f, -1f, -1f, 1f, 1f, 1f))
+        val quad = glowQuad ?: return
+        quad.position(0)
         GLES20.glEnableVertexAttribArray(aPos)
         GLES20.glVertexAttribPointer(aPos, 2, GLES20.GL_FLOAT, false, 8, quad)
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
@@ -459,7 +462,8 @@ class GlobeRenderer(
         for (l in labels) {
             val tex = labelTexture(l.text)
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, tex.texture)
-            GLES20.glUniform4f(uRect, l.x + 11 * density, l.y - tex.height / 2f, tex.width.toFloat(), tex.height.toFloat())
+            val lx = if (l.left) l.x - 11 * density - tex.width else l.x + 11 * density
+            GLES20.glUniform4f(uRect, lx, l.y - tex.height / 2f, tex.width.toFloat(), tex.height.toFloat())
             GLES20.glUniform1f(uAlpha, if (l.priority >= 9) 1f else 0.95f)
             GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
         }

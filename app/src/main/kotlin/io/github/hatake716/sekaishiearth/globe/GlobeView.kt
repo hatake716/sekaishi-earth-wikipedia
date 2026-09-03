@@ -129,6 +129,11 @@ class GlobeView(
     }
 
     // ------------------------------------------------------------ touch
+    override fun performClick(): Boolean {
+        super.performClick()
+        return true
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         gestures.onTouchEvent(event)
         when (event.actionMasked) {
@@ -203,6 +208,7 @@ class GlobeView(
                 }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                if (event.actionMasked == MotionEvent.ACTION_UP) performClick()
                 if (mode == Mode.DRAG) {
                     val stale = event.eventTime - lastTime > 80
                     val vLat = if (stale) 0.0 else velLat

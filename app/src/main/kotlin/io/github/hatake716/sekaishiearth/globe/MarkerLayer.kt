@@ -73,7 +73,8 @@ class MarkerLayer(private val entries: List<Entry>, private val density: Float) 
     var markerCount = 0
         private set
 
-    class Label(val id: Int, val x: Float, val y: Float, val text: String, val priority: Int)
+    /** left=true ならピンの左側にラベルを置く。 */
+    class Label(val id: Int, val x: Float, val y: Float, val text: String, val priority: Int, val left: Boolean = false)
     val labels = ArrayList<Label>()
 
     @Volatile var snapshot: MarkerSnapshot = MarkerSnapshot(IntArray(0), FloatArray(0), FloatArray(0), 0, 0.0)
@@ -85,6 +86,12 @@ class MarkerLayer(private val entries: List<Entry>, private val density: Float) 
     private val snapIds = IntArray(n)
     private val snapXs = FloatArray(n)
     private val snapYs = FloatArray(n)
+    /** 重要度降順→目次順に並べた添字。表示順・代表選出はこの順で走査すれば済む。 */
+    private val priorityOrder: IntArray
+    private val visIdx = IntArray(n)
+    private val visX = FloatArray(n)
+    private val visY = FloatArray(n)
+    private val isRep = BooleanArray(n)
 
     init {
         val xyz = DoubleArray(3)
@@ -101,6 +108,7 @@ class MarkerLayer(private val entries: List<Entry>, private val density: Float) 
             val sorted = g.sortedWith(compareByDescending<Int> { importance[it] }.thenBy { entries[it].order })
             for ((k, i) in sorted.withIndex()) { groupIndex[i] = k; groupSize[i] = sorted.size }
         }
+        priorityOrder = (0 until n).sortedWith(compareByDescending<Int> { importance[it] }.thenBy { entries[it].order }).toIntArray()
     }
 
     private fun applyFilter() {
@@ -135,13 +143,11 @@ class MarkerLayer(private val entries: List<Entry>, private val density: Float) 
         var snapCount = 0
         val eye = camera.eyeInEarth
         val sel = selectedId
-        // まず表示対象を投影
-        val visIdx = IntArray(n)
-        val visX = FloatArray(n)
-        val visY = FloatArray(n)
+        // まず表示対象を投影(優先順に走査するので vis 配列は優先順に並ぶ)
         var vis = 0
         val limbMargin = 0.02
-        for (i in 0 until n) {
+        for (pi in 0 until n) {
+            val i = priorityOrder[pi]
             if (!enabled[i]) continue
             val x = px[i]; val y = py[i]; val z = pz[i]
             // 地平線の少し内側までを表示
@@ -162,18 +168,17 @@ class MarkerLayer(private val entries: List<Entry>, private val density: Float) 
             if (sx < -40 || sy < -40 || sx > w + 40 || sy > h + 40) continue
             visIdx[vis] = i; visX[vis] = sx; visY[vis] = sy; vis++
         }
-        // 重要度順に代表を決める(セルごとに 1 件)
-        val orderArr = (0 until vis).sortedWith(compareByDescending<Int> { importance[visIdx[it]] }.thenBy { entries[visIdx[it]].order })
-        val isRep = BooleanArray(vis)
-        for (o in orderArr) {
+        // 優先順に代表を決める(セルごとに 1 件)
+        for (o in 0 until vis) {
+            isRep[o] = false
             val cx = (visX[o] / cell).toInt(); val cy = (visY[o] / cell).toInt()
             val key = cy.toLong() * cellsX + cx
             if (!cellMap.containsKey(key)) { cellMap[key] = o; isRep[o] = true }
         }
         val fewMode = vis <= 120
         val centerX = w / 2; val centerY = h / 2
-        // ラベル候補: 代表を中心からの距離と重要度で並べ、重ならないものだけ採用
-        val labelCandidates = orderArr.filter { isRep[it] || fewMode }
+        // ラベル候補: 代表(少数なら全件)を重要度→画面中央からの距離で並べ、重ならないものだけ採用
+        val labelCandidates = (0 until vis).filter { isRep[it] || fewMode }
             .sortedWith(compareByDescending<Int> { importance[visIdx[it]] }.thenBy { hypot(visX[it] - centerX, visY[it] - centerY) })
         val maxLabels = if (fewMode) 60 else 36
         val labelH = 20f * density
@@ -184,17 +189,23 @@ class MarkerLayer(private val entries: List<Entry>, private val density: Float) 
             val e = entries[i]
             val text = e.term
             val lw = text.length * charW + 12 * density
-            val lx = visX[o] + 10 * density
             val ly = visY[o] - labelH / 2
-            val rect = floatArrayOf(lx, ly, lx + lw, ly + labelH)
-            if (rect[2] > w + 4 || rect[0] < -4) continue
-            var overlap = false
-            for (r in labelRects) {
-                if (rect[0] < r[2] && rect[2] > r[0] && rect[1] < r[3] && rect[3] > r[1]) { overlap = true; break }
+            var placed = false
+            for (side in 0..1) {
+                val lx = if (side == 0) visX[o] + 10 * density else visX[o] - 10 * density - lw
+                val rect = floatArrayOf(lx, ly, lx + lw, ly + labelH)
+                if (rect[2] > w + 4 || rect[0] < -4) continue
+                var overlap = false
+                for (r in labelRects) {
+                    if (rect[0] < r[2] && rect[2] > r[0] && rect[1] < r[3] && rect[3] > r[1]) { overlap = true; break }
+                }
+                if (overlap) continue
+                labelRects.add(rect)
+                labels.add(Label(e.id, visX[o], visY[o], text, importance[i], left = side == 1))
+                placed = true
+                break
             }
-            if (overlap) continue
-            labelRects.add(rect)
-            labels.add(Label(e.id, visX[o], visY[o], text, importance[i]))
+            if (!placed) continue
         }
         // 描画データ
         val md = markerData
