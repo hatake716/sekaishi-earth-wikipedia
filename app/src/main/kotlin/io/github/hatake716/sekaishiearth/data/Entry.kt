@@ -17,7 +17,8 @@ enum class Category(val label: String, val color: Color) {
 }
 
 /**
- * 世界史の窓の用語 1 件。座標は Wikipedia 記事の主題が起きた／存在した場所。
+ * 世界史の用語 1 件。用語名(見出し)以外の内容 — 解説文・座標・年代・分類 — は
+ * すべて Wikipedia / Wikidata の情報から生成している。
  * 年は西暦(紀元前は負数、0 は使わない)。
  */
 data class Entry(
@@ -33,12 +34,12 @@ data class Entry(
     val era: String,
     val category: Category,
     val importance: Int,
+    /** Wikipedia の記事冒頭を要約した一文。出典は Wikipedia。 */
     val desc: String,
-    val chapterIndex: Int,
-    val sectionIndex: Int,
-    val sub: String,
-    val order: Int,
-    val href: String,
+    /** 時代の区分(古代・中世・近世・近代・現代など)。年代からの機械分類で、絞り込みに使う。 */
+    val periodIndex: Int,
+    /** 地域(東アジア・ヨーロッパ・西アジアなど)。座標からの機械分類で、絞り込みに使う。 */
+    val regionIndex: Int,
     /** wikiTitle が用語そのものの記事なら true、関連記事で代用しているなら false。 */
     val exactTitle: Boolean = true,
 ) {
@@ -51,8 +52,12 @@ data class Entry(
     /** デスクトップ版 Wikipedia(共有用)。 */
     val wikipediaDesktopUrl: String get() = "https://ja.wikipedia.org/wiki/" + encodedTitle()
 
-    /** 世界史の窓の元ページ。 */
-    val sourceUrl: String get() = "https://www.y-history.net/appendix/$href"
+    /** この用語に関連する YouTube 動画の検索結果(アプリ内 WebView で開く)。 */
+    val youtubeSearchUrl: String
+        get() {
+            val q = java.net.URLEncoder.encode("$term 世界史 歴史 解説", "UTF-8")
+            return "https://m.youtube.com/results?search_query=$q"
+        }
 
     val hasWikipedia: Boolean get() = wikiTitle.isNotBlank()
 }

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.Button
@@ -55,7 +56,7 @@ fun DetailCard(
     onToggleExpand: () -> Unit,
     onClose: () -> Unit,
     onWikipedia: () -> Unit,
-    onSource: () -> Unit,
+    onYoutube: () -> Unit,
     onZoom: () -> Unit,
     onShare: () -> Unit,
 ) {
@@ -112,16 +113,17 @@ fun DetailCard(
                 )
             }
             if (expanded) {
-                val chapter = catalog.chapters.getOrNull(entry.chapterIndex) ?: ""
-                val section = catalog.sections.getOrNull(entry.sectionIndex) ?: ""
-                val path = listOf(chapter, section, entry.sub).filter { it.isNotBlank() }.joinToString(" › ")
+                val period = catalog.periods.getOrNull(entry.periodIndex) ?: ""
+                val region = catalog.regions.getOrNull(entry.regionIndex) ?: ""
+                val path = listOf(period, region).filter { it.isNotBlank() }.joinToString(" ・ ")
                 if (path.isNotBlank()) {
-                    Text("世界史の窓: $path", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp, end = 10.dp))
+                    Text(path, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp, end = 10.dp))
                 }
                 if (entry.hasWikipedia) {
-                    val prefix = if (entry.exactTitle) "Wikipedia" else "Wikipedia(関連記事)"
+                    val prefix = if (entry.exactTitle) "Wikipedia 記事" else "Wikipedia(関連記事)"
                     Text("$prefix: ${entry.wikiTitle}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp, end = 10.dp))
                 }
+                Text("解説の出典: Wikipedia", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), modifier = Modifier.padding(top = 2.dp, end = 10.dp))
             }
             Row(Modifier.padding(top = 10.dp, end = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Button(
@@ -135,10 +137,14 @@ fun DetailCard(
                     Text(if (!entry.hasWikipedia) "記事なし" else if (entry.exactTitle) "Wikipedia" else "関連記事", maxLines = 1, softWrap = false)
                 }
                 FilledTonalButton(
-                    onClick = onSource,
+                    onClick = onYoutube,
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                ) { Text("世界史の窓", maxLines = 1, softWrap = false) }
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                ) {
+                    Icon(Icons.Default.PlayCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("動画", maxLines = 1, softWrap = false)
+                }
                 IconButton(onClick = onZoom) { Icon(Icons.Default.ZoomIn, contentDescription = "この場所を拡大") }
                 IconButton(onClick = onShare) { Icon(Icons.Default.Share, contentDescription = "共有") }
             }

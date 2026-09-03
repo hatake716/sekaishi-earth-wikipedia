@@ -66,6 +66,10 @@ class GlobeRenderer(
     private var flyStart = 0L
     private var flyDuration = 0L
     private var idleNotified = true
+    // カメラ位置の変化検知(ドラッグ/ピンチだけで動いたフレームも idle 通知の対象にする)
+    private var prevLat = Double.NaN
+    private var prevLon = Double.NaN
+    private var prevAlt = Double.NaN
 
     private class Mesh(val vertices: FloatBuffer, val indices: ShortBuffer, val indexCount: Int)
 
@@ -101,6 +105,8 @@ class GlobeRenderer(
         meshes.clear()
         labelCache.evictAll()
         tiles.onSurfaceCreated()
+        // デコード完了時に GL スレッドの再描画を促す(操作終了直後もタイルが反映されるように)
+        tiles.onTileDecoded = { requestRender() }
         buildStars()
         quadBuffer = floatBufferOf(floatArrayOf(0f, 0f, 1f, 0f, 0f, 1f, 1f, 1f))
         glowQuad = floatBufferOf(floatArrayOf(-1f, -1f, 1f, -1f, -1f, 1f, 1f, 1f))
@@ -137,6 +143,11 @@ class GlobeRenderer(
         drawMarkers()
         drawLabels()
         tiles.evict(frame)
+
+        // カメラが前フレームから動いていたら idle 状態を解除する(ドラッグ/ピンチ由来の移動も拾う)
+        val moved = camera.centerLat != prevLat || camera.centerLon != prevLon || camera.altitude != prevAlt
+        prevLat = camera.centerLat; prevLon = camera.centerLon; prevAlt = camera.altitude
+        if (moved) idleNotified = false
 
         if (animating || uploaded || tiles.hasPending) {
             idleNotified = false
@@ -501,6 +512,11 @@ class GlobeRenderer(
     }
 
     fun entry(id: Int): Entry? = entryById[id]
+
+    /** GlobeView 破棄時にワーカースレッドを止める。 */
+    fun releaseResources() {
+        tiles.shutdown()
+    }
 
     private fun floatBufferOf(arr: FloatArray): FloatBuffer {
         val b = ByteBuffer.allocateDirect(arr.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()

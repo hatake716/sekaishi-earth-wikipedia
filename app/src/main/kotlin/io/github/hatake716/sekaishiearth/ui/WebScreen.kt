@@ -46,7 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 
-/** アプリ内ブラウザ。Wikipedia と世界史の窓の記事を表示する。 */
+/** アプリ内ブラウザ。Wikipedia の記事と YouTube の検索結果を表示する。 */
 @SuppressLint("SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,6 +125,19 @@ fun WebScreen(url: String, title: String, onClose: () -> Unit) {
 
                                 override fun onReceivedError(view: WebView, request: WebResourceRequest, err: WebResourceError) {
                                     if (request.isForMainFrame) error = err.description?.toString() ?: "読み込みエラー"
+                                }
+
+                                // レンダラプロセスが低メモリ等で死んだ時、アプリごと落とされないよう自前で復帰する
+                                override fun onRenderProcessGone(
+                                    view: WebView,
+                                    detail: android.webkit.RenderProcessGoneDetail?,
+                                ): Boolean {
+                                    val parent = view.parent as? ViewGroup
+                                    parent?.removeView(view)
+                                    view.destroy()
+                                    if (webView === view) webView = null
+                                    error = "表示処理が停止しました。再試行してください。"
+                                    return true // アプリプロセスの終了を防ぐ
                                 }
                             }
                             webChromeClient = object : WebChromeClient() {

@@ -28,12 +28,13 @@ class GlobeView(
     private val density = resources.displayMetrics.density
 
     private var mode = Mode.NONE
-    private var grab: DoubleArray? = null
+    // grab / velocity は UI スレッドと GL スレッド(queueEvent)の両方から触るため可視性を確保する
+    @Volatile private var grab: DoubleArray? = null
     private var lastX = 0f
     private var lastY = 0f
     private var lastTime = 0L
-    private var velLat = 0.0
-    private var velLon = 0.0
+    @Volatile private var velLat = 0.0
+    @Volatile private var velLon = 0.0
     private var pinchDist = 0f
     private var pinchFocalX = 0f
     private var pinchFocalY = 0f
@@ -129,6 +130,12 @@ class GlobeView(
     }
 
     // ------------------------------------------------------------ touch
+    override fun onDetachedFromWindow() {
+        // ビューがツリーから外れたらタイルデコード用スレッドを止める(スレッド漏れ防止)
+        renderer.releaseResources()
+        super.onDetachedFromWindow()
+    }
+
     override fun performClick(): Boolean {
         super.performClick()
         return true

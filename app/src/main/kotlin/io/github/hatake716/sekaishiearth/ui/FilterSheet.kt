@@ -103,23 +103,21 @@ fun FilterSheet(vm: MainViewModel, catalog: Catalog, onDismiss: () -> Unit) {
             }
 
             Spacer(Modifier.height(16.dp))
-            Text("章(世界史の窓の構成)", style = MaterialTheme.typography.titleSmall)
+            Text("地域", style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                for ((i, ch) in catalog.chapters.withIndex()) {
-                    val on = f.chapters == null || i in f.chapters
+                for ((i, rg) in catalog.regions.withIndex()) {
+                    // regions==null は「全地域表示」。分類チップと同じく選択=表示の直感に合わせる。
+                    val selected = f.regions == null || i in f.regions
                     FilterChip(
-                        selected = f.chapters != null && i in f.chapters,
+                        selected = selected,
                         onClick = {
-                            val cur = f.chapters?.toMutableSet() ?: catalog.chapters.indices.toMutableSet()
-                            if (f.chapters == null) {
-                                // 未指定(=全章)状態でタップしたらその章だけに
-                                vm.filter = f.copy(chapters = setOf(i))
-                            } else {
-                                if (on) cur.remove(i) else cur.add(i)
-                                vm.filter = f.copy(chapters = if (cur.size == catalog.chapters.size || cur.isEmpty()) null else cur)
-                            }
+                            val cur = f.regions?.toMutableSet() ?: catalog.regions.indices.toMutableSet()
+                            if (selected) cur.remove(i) else cur.add(i)
+                            vm.filter = f.copy(
+                                regions = if (cur.size == catalog.regions.size) null else cur,
+                            )
                         },
-                        label = { Text(ch, style = MaterialTheme.typography.labelMedium) },
+                        label = { Text(rg, style = MaterialTheme.typography.labelMedium) },
                     )
                 }
             }

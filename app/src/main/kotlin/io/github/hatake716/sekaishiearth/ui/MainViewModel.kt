@@ -86,9 +86,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         webUrl = e.wikipediaUrl
     }
 
-    fun openSource(e: Entry) {
-        webTitle = "世界史の窓: ${e.term}"
-        webUrl = e.sourceUrl
+    fun openYoutube(e: Entry) {
+        webTitle = "YouTube: ${e.term}"
+        webUrl = e.youtubeSearchUrl
     }
 
     fun closeWeb() {
@@ -109,6 +109,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun isFilterActive(): Boolean {
         val f = filter
-        return f.yearMin != Int.MIN_VALUE || f.yearMax != Int.MAX_VALUE || f.categories.size != Category.entries.size || f.chapters != null
+        return f.yearMin != Int.MIN_VALUE || f.yearMax != Int.MAX_VALUE || f.categories.size != Category.entries.size || f.regions != null
     }
 }

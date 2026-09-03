@@ -3,19 +3,20 @@ package io.github.hatake716.sekaishiearth.globe
 import io.github.hatake716.sekaishiearth.data.Category
 import io.github.hatake716.sekaishiearth.data.Entry
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.sin
 
-/** 表示フィルタ。 */
+/** 表示フィルタ。regions/periods は null なら全件表示。 */
 data class MarkerFilter(
     val yearMin: Int = Int.MIN_VALUE,
     val yearMax: Int = Int.MAX_VALUE,
     val categories: Set<Category> = Category.entries.toSet(),
-    val chapters: Set<Int>? = null,
+    val regions: Set<Int>? = null,
 ) {
     fun accepts(e: Entry): Boolean {
         if (e.category !in categories) return false
-        if (chapters != null && e.chapterIndex !in chapters) return false
+        if (regions != null && e.regionIndex !in regions) return false
         if (yearMin != Int.MIN_VALUE || yearMax != Int.MAX_VALUE) {
             val y = e.year ?: return true // 年不明は常に表示
             val ye = e.yearEnd ?: y
@@ -115,16 +116,20 @@ class MarkerLayer(private val entries: List<Entry>, private val density: Float) 
             groups.getOrPut(gk) { ArrayList() }.add(i)
         }
         for (g in groups.values) {
-            val sorted = g.sortedWith(compareByDescending<Int> { importance[it] }.thenBy { entries[it].order })
+            val sorted = g.sortedWith(compareByDescending<Int> { importance[it] }.thenBy { entries[it].id })
             for ((k, i) in sorted.withIndex()) { groupIndex[i] = k; groupSize[i] = sorted.size }
         }
-        priorityOrder = (0 until n).sortedWith(compareByDescending<Int> { importance[it] }.thenBy { entries[it].order }).toIntArray()
+        priorityOrder = (0 until n).sortedWith(compareByDescending<Int> { importance[it] }.thenBy { entries[it].id }).toIntArray()
     }
 
+    /** 適用済みフィルタ。lost update を避けるため、掴んだ値がまだ最新の時だけ dirty を落とす。 */
+    private var appliedFilter: MarkerFilter? = null
     private fun applyFilter() {
         val f = filter
         for (i in 0 until n) enabled[i] = f.accepts(entries[i])
-        filterDirty = false
+        appliedFilter = f
+        // ループ中に UI が別のフィルタを設定していたら dirty のままにして次フレームで再適用する
+        if (filter === f) filterDirty = false
     }
 
     /** 表示中の(フィルタ通過)件数。 */
@@ -166,10 +171,13 @@ class MarkerLayer(private val entries: List<Entry>, private val density: Float) 
             var sx = tmp[0]; var sy = tmp[1]
             if (spread && groupSize[i] > 1) {
                 val k = groupIndex[i]
-                val ring = (k + 5) / 6
-                val perRing = 6 * ring
-                val idxInRing = (k - 1) - 6 * (ring - 1) * ring / 2
                 if (k > 0) {
+                    // リング r には 6r 件配置。中心(k=0)を除き、累積 3r(r-1) < k を満たす最小 r を求める。
+                    var ring = 1
+                    while (k > 3 * ring * (ring + 1)) ring++
+                    val startOfRing = 3 * ring * (ring - 1) // このリング先頭の k-1 の基準
+                    val perRing = 6 * ring
+                    val idxInRing = (k - 1) - startOfRing
                     val ang = 2 * Math.PI * idxInRing / perRing
                     sx += (spreadRadius * ring * cos(ang)).toFloat()
                     sy += (spreadRadius * ring * sin(ang)).toFloat()
@@ -178,11 +186,12 @@ class MarkerLayer(private val entries: List<Entry>, private val density: Float) 
             if (sx < -40 || sy < -40 || sx > w + 40 || sy > h + 40) continue
             visIdx[vis] = i; visX[vis] = sx; visY[vis] = sy; vis++
         }
-        // 優先順に代表を決める(セルごとに 1 件)
+        // 優先順に代表を決める(セルごとに 1 件)。画面外余白の負座標も含むため floor + オフセットでキーを作る。
         for (o in 0 until vis) {
             isRep[o] = false
-            val cx = (visX[o] / cell).toInt(); val cy = (visY[o] / cell).toInt()
-            val key = cy.toLong() * cellsX + cx
+            val cx = floor(visX[o] / cell).toInt() + 2
+            val cy = floor(visY[o] / cell).toInt() + 2
+            val key = cy.toLong() * (cellsX + 4) + cx
             if (!cellMap.containsKey(key)) { cellMap[key] = o; isRep[o] = true }
         }
         val fewMode = vis <= 120

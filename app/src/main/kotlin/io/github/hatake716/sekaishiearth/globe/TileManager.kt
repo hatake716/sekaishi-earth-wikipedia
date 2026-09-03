@@ -23,6 +23,7 @@ class TileManager(private val assets: AssetManager) {
         var texture = 0
         var lastUsedFrame = 0L
         var loading = false
+        var failed = false // デコード失敗タイル(毎フレームの再デコードを防ぐ)
         val loaded: Boolean get() = texture != 0
     }
 
@@ -40,8 +41,11 @@ class TileManager(private val assets: AssetManager) {
     private val pending = ConcurrentLinkedQueue<Pair<Int, Bitmap?>>()
     private val inFlight = AtomicInteger(0)
     private var executor: ExecutorService = Executors.newFixedThreadPool(2)
-    private var generation = 0
+    @Volatile private var generation = 0
     var anisotropy = 0f
+
+    /** デコード完了時に GL スレッドの再描画を促すためのコールバック(RENDERMODE_WHEN_DIRTY 対策)。 */
+    var onTileDecoded: (() -> Unit)? = null
 
     fun cols(level: Int) = 2 shl level
     fun rows(level: Int) = 1 shl level
@@ -77,7 +81,7 @@ class TileManager(private val assets: AssetManager) {
     fun request(level: Int, x: Int, y: Int) {
         val k = key(level, x, y)
         val t = tiles.getOrPut(k) { TileTex(k) }
-        if (t.loaded || t.loading) return
+        if (t.loaded || t.loading || t.failed) return
         if (inFlight.get() >= MAX_IN_FLIGHT) return
         t.loading = true
         inFlight.incrementAndGet()
@@ -89,10 +93,17 @@ class TileManager(private val assets: AssetManager) {
                     val opts = BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.ARGB_8888 }
                     bmp = BitmapFactory.decodeStream(input, null, opts)
                 }
+            } catch (e: OutOfMemoryError) {
+                Log.w(TAG, "tile decode OOM $level/$x/$y")
             } catch (e: Exception) {
                 Log.w(TAG, "tile decode failed $level/$x/$y: $e")
             }
-            if (gen == generation) pending.add(k to bmp) else bmp?.recycle()
+            if (gen == generation) {
+                pending.add(k to bmp)
+                onTileDecoded?.invoke() // GL スレッドへ再描画を要求(デコード完了が画面へ反映されるように)
+            } else {
+                bmp?.recycle()
+            }
             inFlight.decrementAndGet()
         }
     }
@@ -105,7 +116,7 @@ class TileManager(private val assets: AssetManager) {
             val (k, bmp) = pending.poll() ?: break
             val t = tiles[k] ?: continue
             t.loading = false
-            if (bmp == null) continue
+            if (bmp == null) { t.failed = true; continue }
             val ids = IntArray(1)
             GLES20.glGenTextures(1, ids, 0)
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, ids[0])
@@ -177,6 +188,13 @@ class TileManager(private val assets: AssetManager) {
             v.texture = 0
         }
         GLES20.glDeleteTextures(ids.size, ids, 0)
+    }
+
+    /** GlobeView 破棄時にワーカースレッドを止める(非デーモンスレッドの漏れを防ぐ)。 */
+    fun shutdown() {
+        generation++
+        executor.shutdownNow()
+        pending.clear()
     }
 
     companion object {

@@ -165,8 +165,11 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
                 tonalElevation = 3.dp,
             ) {
                 val results = vm.searchResults
+                // 退場フェード中(query が空)に「該当なし」がちらつかないよう query 非空を条件に含める
                 if (results.isEmpty()) {
-                    Text("該当する用語がありません", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (vm.query.isNotBlank()) {
+                        Text("該当する用語がありません", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 } else {
                     LazyColumn {
                         items(results, key = { it.id }) { e ->
@@ -231,7 +234,7 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
                 color = Color.White.copy(alpha = 0.85f),
             )
             Text(
-                "画像: NASA Blue Marble ／ 用語: 世界史の窓 ／ 記事: Wikipedia",
+                "地図画像: NASA Blue Marble ／ 解説・記事: Wikipedia",
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.55f),
                 fontSize = 9.sp,
@@ -240,13 +243,16 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
     }
 
     // ---- 詳細カード ----
+    // 退場アニメーション中も内容を保つため、直近の非 null 用語を覚えておく。
+    var lastShown by remember { mutableStateOf<Entry?>(null) }
+    if (selected != null) lastShown = selected
     AnimatedVisibility(
         visible = selected != null,
         modifier = Modifier.align(Alignment.BottomCenter),
         enter = slideInVertically { it } + fadeIn(),
         exit = slideOutVertically { it } + fadeOut(),
     ) {
-        val e = selected ?: catalog.entries.firstOrNull() ?: return@AnimatedVisibility
+        val e = selected ?: lastShown ?: return@AnimatedVisibility
         DetailCard(
             entry = e,
             catalog = catalog,
@@ -254,7 +260,7 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
             onToggleExpand = { vm.detailExpanded = !vm.detailExpanded },
             onClose = { vm.clearSelection() },
             onWikipedia = { vm.openWikipedia(e) },
-            onSource = { vm.openSource(e) },
+            onYoutube = { vm.openYoutube(e) },
             onZoom = { globe?.flyToEntry(e, 0.012) },
             onShare = { shareEntry(context, e) },
         )
@@ -379,8 +385,7 @@ private fun shareEntry(context: android.content.Context, e: Entry) {
         append(e.term)
         if (e.place.isNotBlank()) append("(${e.place})")
         append("\n")
-        if (e.hasWikipedia) append(e.wikipediaDesktopUrl).append("\n")
-        append(e.sourceUrl)
+        if (e.hasWikipedia) append(e.wikipediaDesktopUrl)
     }
     val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
         type = "text/plain"
