@@ -187,14 +187,14 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
         }
     }
 
-    // ---- 右下: ズーム・ランダム・全体 ----
+    // ---- 左下: ズーム・ランダム・全体のボタン列 ----
     Column(
-        Modifier.align(Alignment.BottomEnd).windowInsetsPadding(WindowInsets.navigationBars).padding(end = 12.dp, bottom = if (selected != null) 8.dp else 40.dp),
-        horizontalAlignment = Alignment.End,
+        Modifier.align(Alignment.BottomStart).windowInsetsPadding(WindowInsets.navigationBars).padding(start = 12.dp, bottom = if (selected != null) 8.dp else 40.dp),
+        horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         AnimatedVisibility(visible = selected == null, enter = fadeIn(), exit = fadeOut()) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.End) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.Start) {
                 SmallFloatingActionButton(onClick = { vm.showAbout = true }, containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
                     Icon(Icons.Default.Info, contentDescription = "このアプリについて")
                 }
@@ -220,23 +220,66 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
         }
     }
 
-    // ---- 左下: 件数と出典 ----
+    // ---- 右端: 年代レンジバー(縦) ----
+    AnimatedVisibility(
+        visible = selected == null,
+        modifier = Modifier.align(Alignment.CenterEnd),
+        enter = fadeIn(), exit = fadeOut(),
+    ) {
+        val shown = remember(vm.filter, catalog) { catalog.entries.count { vm.filter.accepts(it) } }
+        Surface(
+            shape = RoundedCornerShape(22.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
+            tonalElevation = 3.dp,
+            shadowElevation = 4.dp,
+            modifier = Modifier
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(end = 8.dp)
+                .height(360.dp),
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 12.dp),
+            ) {
+                Text("年代", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(4.dp))
+                YearRangeBar(
+                    yearMin = vm.filter.yearMin,
+                    yearMax = vm.filter.yearMax,
+                    minYear = -3500,
+                    maxYear = 2030,
+                    modifier = Modifier.weight(1f),
+                    onRangeChange = { lo, hi ->
+                        vm.filter = vm.filter.copy(yearMin = lo, yearMax = hi)
+                    },
+                )
+                if (vm.filter.yearMin != Int.MIN_VALUE || vm.filter.yearMax != Int.MAX_VALUE) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        "${"%,d".format(shown)}件",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 9.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+        }
+    }
+
+    // ---- 左下(ボタン列の下): 件数と出典 ----
     AnimatedVisibility(
         visible = selected == null,
         modifier = Modifier.align(Alignment.BottomStart),
         enter = fadeIn(), exit = fadeOut(),
     ) {
-        Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars).padding(start = 12.dp, bottom = 8.dp)) {
-            val shown = remember(vm.filter, catalog) { catalog.entries.count { vm.filter.accepts(it) } }
-            Text(
-                "${"%,d".format(shown)} / ${"%,d".format(catalog.entries.size)} 件",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.85f),
-            )
+        // 出典表記は画面最下部の中央寄りに小さく置く(ボタン列と重ならないよう bottom 端)
+        Column(
+            Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(start = 84.dp, end = 12.dp, bottom = 6.dp),
+        ) {
             Text(
                 "地図画像: NASA Blue Marble ／ 解説・記事: Wikipedia",
                 style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.55f),
+                color = Color.White.copy(alpha = 0.5f),
                 fontSize = 9.sp,
             )
         }

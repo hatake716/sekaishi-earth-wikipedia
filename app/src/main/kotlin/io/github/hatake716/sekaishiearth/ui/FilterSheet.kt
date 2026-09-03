@@ -19,70 +19,34 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.hatake716.sekaishiearth.data.Catalog
 import io.github.hatake716.sekaishiearth.data.Category
-import io.github.hatake716.sekaishiearth.data.formatYear
 import io.github.hatake716.sekaishiearth.globe.MarkerFilter
-import kotlin.math.roundToInt
 
-/** 年代・分類・章で表示するピンを絞り込む。 */
+/** 分類・地域で表示するピンを絞り込む(年代は画面右の縦バー)。 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterSheet(vm: MainViewModel, catalog: Catalog, onDismiss: () -> Unit) {
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val f = vm.filter
-    val minY = -3500f
-    val maxY = 2030f
-    var range by remember(f) {
-        mutableStateOf(
-            (if (f.yearMin == Int.MIN_VALUE) minY else f.yearMin.toFloat())..(if (f.yearMax == Int.MAX_VALUE) maxY else f.yearMax.toFloat())
-        )
-    }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("絞り込み", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                TextButton(onClick = { vm.resetFilter(); range = minY..maxY }) { Text("リセット") }
+                TextButton(onClick = { vm.resetFilter() }) { Text("リセット") }
             }
             val shown = remember(f) { catalog.entries.count { f.accepts(it) } }
             Text("${"%,d".format(shown)} 件を表示中", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-            Spacer(Modifier.height(16.dp))
-            Text("年代", style = MaterialTheme.typography.titleSmall)
-            val lo = range.start.roundToInt()
-            val hi = range.endInclusive.roundToInt()
-            Text(
-                if (lo <= minY.toInt() && hi >= maxY.toInt()) "すべての年代" else "${if (lo <= minY.toInt()) "" else formatYear(yearOf(lo))} 〜 ${if (hi >= maxY.toInt()) "" else formatYear(yearOf(hi))}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            RangeSlider(
-                value = range,
-                onValueChange = { range = it },
-                valueRange = minY..maxY,
-                steps = 0,
-                onValueChangeFinished = {
-                    val s = range.start.roundToInt()
-                    val e = range.endInclusive.roundToInt()
-                    vm.filter = vm.filter.copy(
-                        yearMin = if (s <= minY.toInt()) Int.MIN_VALUE else yearOf(s),
-                        yearMax = if (e >= maxY.toInt()) Int.MAX_VALUE else yearOf(e),
-                    )
-                },
-            )
-            Text("年不明の用語は常に表示されます", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("年代は画面右のバーで絞り込めます。", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
 
             Spacer(Modifier.height(16.dp))
             Text("分類", style = MaterialTheme.typography.titleSmall)
@@ -125,5 +89,3 @@ fun FilterSheet(vm: MainViewModel, catalog: Catalog, onDismiss: () -> Unit) {
     }
 }
 
-/** スライダー値(線形)→年。紀元前側を圧縮して近代を細かく動かせるようにする。 */
-private fun yearOf(v: Int): Int = v
