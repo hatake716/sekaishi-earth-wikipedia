@@ -13,7 +13,7 @@ import java.text.Normalizer
  * {
  *   "chapters": ["序章 先史の世界", ...],
  *   "sections": ["1節 古代オリエント世界", ...],
- *   "entries": [[id, term, "alias1|alias2", wikiTitle, lat, lon, place, year, yearEnd, era, cat, importance, desc, chapterIdx, sectionIdx, sub, order, href], ...]
+ *   "entries": [[id, term, "alias1|alias2", wikiTitle, lat, lon, place, year, yearEnd, era, cat, importance, desc, chapterIdx, sectionIdx, sub, order, href, exactTitle(0/1)], ...]
  * }
  */
 class Catalog(
@@ -113,10 +113,15 @@ class Catalog(
             val sub = reader.nextString()
             val order = reader.nextInt()
             val href = reader.nextString()
+            // 末尾の任意フィールド: titleMatch (1=用語そのものの記事, 0=関連記事)
+            var exact = true
+            while (reader.hasNext()) {
+                if (reader.peek() == JsonToken.NUMBER) exact = reader.nextInt() != 0 else reader.skipValue()
+            }
             reader.endArray()
             return Entry(
                 id, term, aliases, wikiTitle, lat, lon, place, year, yearEnd, era, cat, importance, desc,
-                chapterIdx, sectionIdx, sub, order, href,
+                chapterIdx, sectionIdx, sub, order, href, exact,
             )
         }
 

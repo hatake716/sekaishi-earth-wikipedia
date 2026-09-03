@@ -39,6 +39,8 @@ data class Entry(
     val sub: String,
     val order: Int,
     val href: String,
+    /** wikiTitle が用語そのものの記事なら true、関連記事で代用しているなら false。 */
+    val exactTitle: Boolean = true,
 ) {
     private fun encodedTitle(): String =
         java.net.URLEncoder.encode(wikiTitle.replace(' ', '_'), "UTF-8").replace("+", "%20")

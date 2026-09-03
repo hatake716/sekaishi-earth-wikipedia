@@ -57,7 +57,8 @@ fun ListScreen(catalog: Catalog, onClose: () -> Unit, onSelect: (Entry) -> Unit)
                     lastChapter = e.chapterIndex; lastSection = -1; lastSub = ""
                 }
                 if (e.sectionIndex != lastSection) {
-                    out.add(Row.Header(catalog.sections.getOrNull(e.sectionIndex) ?: "", 1))
+                    val name = catalog.sections.getOrNull(e.sectionIndex) ?: ""
+                    if (name.isNotBlank()) out.add(Row.Header(name, 1))
                     lastSection = e.sectionIndex; lastSub = ""
                 }
                 if (e.sub != lastSub && e.sub.isNotBlank()) {

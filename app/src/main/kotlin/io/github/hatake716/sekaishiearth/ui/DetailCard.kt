@@ -119,7 +119,8 @@ fun DetailCard(
                     Text("世界史の窓: $path", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp, end = 10.dp))
                 }
                 if (entry.hasWikipedia) {
-                    Text("Wikipedia: ${entry.wikiTitle}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp, end = 10.dp))
+                    val prefix = if (entry.exactTitle) "Wikipedia" else "Wikipedia(関連記事)"
+                    Text("$prefix: ${entry.wikiTitle}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp, end = 10.dp))
                 }
             }
             Row(Modifier.padding(top = 10.dp, end = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -131,7 +132,7 @@ fun DetailCard(
                 ) {
                     Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(if (entry.hasWikipedia) "Wikipedia" else "記事なし", maxLines = 1, softWrap = false)
+                    Text(if (!entry.hasWikipedia) "記事なし" else if (entry.exactTitle) "Wikipedia" else "関連記事", maxLines = 1, softWrap = false)
                 }
                 FilledTonalButton(
                     onClick = onSource,
