@@ -342,8 +342,10 @@ class GlobeRenderer(
         mesh.vertices.position(0)
         GLES20.glVertexAttribPointer(aUv, 2, GLES20.GL_FLOAT, false, 8, mesh.vertices)
 
-        // 全体が見える高度では、level 0 タイルで裏面も含めて球全体を描く(縁の欠けを防ぐ)
-        if (level > 0) {
+        // 地平線(縁)が画面内にある高度では、level 0 タイルで球全体を先に描き、縁の欠けを防ぐ。
+        // 十分に近づいて縁が画面外なら、可視タイルだけで覆えるので省略する(深度の干渉も避けられる)
+        val needBase = level > 0 && camera.altitude > 0.12
+        if (needBase) {
             for (x in 0..1) {
                 tiles.resolve(0, x, 0, frame, resolved)
                 if (resolved.texture == 0) continue
@@ -360,7 +362,7 @@ class GlobeRenderer(
             GLES20.glVertexAttribPointer(aUv, 2, GLES20.GL_FLOAT, false, 8, mesh.vertices)
             // 深度が同じ面を上書きするため僅かに手前へ(ポリゴンオフセット)
             GLES20.glEnable(GLES20.GL_POLYGON_OFFSET_FILL)
-            GLES20.glPolygonOffset(-1f, -1f)
+            GLES20.glPolygonOffset(-2f, -4f)
         }
         for (k in visibleKeys) {
             val x = (k shr 20).toInt()

@@ -64,7 +64,7 @@ class GlobeView(
 
     init {
         setEGLContextClientVersion(2)
-        setEGLConfigChooser(8, 8, 8, 8, 16, 0)
+        setEGLConfigChooser(8, 8, 8, 8, 24, 0)
         preserveEGLContextOnPause = true
         renderer = GlobeRenderer(context, entries, { requestRender() }, onCameraIdle)
         setRenderer(renderer)
