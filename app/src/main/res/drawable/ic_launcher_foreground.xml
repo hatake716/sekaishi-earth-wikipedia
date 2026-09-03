@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 地球 -->
+    <path android:fillColor="#1E6FD9" android:pathData="M54,54 m-30,0 a30,30 0 1,1 60,0 a30,30 0 1,1 -60,0" />
+    <!-- 大陸(抽象) -->
+    <path android:fillColor="#4CAF50"
+        android:pathData="M38,34 C44,30 52,31 56,36 C60,41 56,46 50,47 C46,48 44,52 40,50 C34,47 32,38 38,34 Z" />
+    <path android:fillColor="#4CAF50"
+        android:pathData="M60,50 C66,46 74,50 76,56 C78,62 72,68 66,66 C60,64 56,55 60,50 Z" />
+    <path android:fillColor="#4CAF50"
+        android:pathData="M40,58 C46,56 50,60 50,66 C50,72 44,76 40,72 C36,68 34,60 40,58 Z" />
+    <!-- 光沢 -->
+    <path android:fillColor="#33FFFFFF" android:pathData="M54,24 a30,30 0 0,1 30,30 L54,54 Z" />
+    <!-- ピン -->
+    <path android:fillColor="#FF5252"
+        android:pathData="M76,22 C69,22 64,27 64,34 C64,43 76,54 76,54 C76,54 88,43 88,34 C88,27 83,22 76,22 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M76,34 m-4.5,0 a4.5,4.5 0 1,1 9,0 a4.5,4.5 0 1,1 -9,0" />
+</vector>
