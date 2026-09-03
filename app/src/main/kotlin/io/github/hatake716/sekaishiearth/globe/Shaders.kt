@@ -10,6 +10,7 @@ object Shaders {
         uniform mat4 uModel;
         uniform vec4 uLatLon;   // lat0(北端), lon0(西端), dLat, dLon (rad)
         uniform vec4 uUv;       // offsetU, offsetV, scaleU, scaleV
+        uniform float uRadius;  // 基底球はタイルの内側に隠すため僅かに小さくする
         attribute vec2 aUv;
         varying vec2 vTex;
         varying vec3 vNormal;
@@ -18,7 +19,7 @@ object Shaders {
             float lat = uLatLon.x - aUv.y * uLatLon.z;
             float lon = uLatLon.y + aUv.x * uLatLon.w;
             float cl = cos(lat);
-            vec3 p = vec3(cl * sin(lon), sin(lat), cl * cos(lon));
+            vec3 p = vec3(cl * sin(lon), sin(lat), cl * cos(lon)) * uRadius;
             vTex = uUv.xy + aUv * uUv.zw;
             vNormal = normalize((uModel * vec4(p, 0.0)).xyz);
             vWorld = (uModel * vec4(p, 1.0)).xyz;

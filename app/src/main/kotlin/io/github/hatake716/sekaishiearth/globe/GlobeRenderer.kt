@@ -331,6 +331,7 @@ class GlobeRenderer(
         val uLight = GLES20.glGetUniformLocation(tileProgram, "uLightDir")
         val uEye = GLES20.glGetUniformLocation(tileProgram, "uEye")
         val uTex = GLES20.glGetUniformLocation(tileProgram, "uTex")
+        val uRadius = GLES20.glGetUniformLocation(tileProgram, "uRadius")
         val aUv = GLES20.glGetAttribLocation(tileProgram, "aUv")
         GLES20.glUniformMatrix4fv(uMvp, 1, false, camera.mvp, 0)
         GLES20.glUniformMatrix4fv(uModel, 1, false, camera.model, 0)
@@ -348,7 +349,10 @@ class GlobeRenderer(
         // 地平線(縁)が画面内にある高度では、level 0 タイルで球全体を先に描き、縁の欠けを防ぐ。
         // 十分に近づいて縁が画面外なら、可視タイルだけで覆えるので省略する(深度の干渉も避けられる)
         val needBase = level > 0 && camera.altitude > 0.12
+        GLES20.glUniform1f(uRadius, 1f)
         if (needBase) {
+            // 粗いメッシュがタイルを突き抜けないよう、基底球は僅かに内側に描く(メッシュの弦の垂れより大きい値)
+            GLES20.glUniform1f(uRadius, 0.9994f)
             for (x in 0..1) {
                 tiles.resolve(0, x, 0, frame, resolved)
                 if (resolved.texture == 0) continue
@@ -363,9 +367,7 @@ class GlobeRenderer(
             }
             mesh.vertices.position(0)
             GLES20.glVertexAttribPointer(aUv, 2, GLES20.GL_FLOAT, false, 8, mesh.vertices)
-            // 深度が同じ面を上書きするため僅かに手前へ(ポリゴンオフセット)
-            GLES20.glEnable(GLES20.GL_POLYGON_OFFSET_FILL)
-            GLES20.glPolygonOffset(-2f, -4f)
+            GLES20.glUniform1f(uRadius, 1f)
         }
         for (k in visibleKeys) {
             val x = (k shr 20).toInt()
@@ -383,7 +385,6 @@ class GlobeRenderer(
             mesh.indices.position(0)
             GLES20.glDrawElements(GLES20.GL_TRIANGLES, mesh.indexCount, GLES20.GL_UNSIGNED_SHORT, mesh.indices)
         }
-        GLES20.glDisable(GLES20.GL_POLYGON_OFFSET_FILL)
         GLES20.glDisableVertexAttribArray(aUv)
     }
 

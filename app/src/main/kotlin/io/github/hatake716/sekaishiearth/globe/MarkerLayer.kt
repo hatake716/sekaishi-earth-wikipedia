@@ -61,6 +61,7 @@ class MarkerLayer(private val entries: List<Entry>, private val density: Float) 
 
     @Volatile var filter: MarkerFilter = MarkerFilter()
         set(value) {
+            if (value == field) return
             field = value
             filterDirty = true
         }
