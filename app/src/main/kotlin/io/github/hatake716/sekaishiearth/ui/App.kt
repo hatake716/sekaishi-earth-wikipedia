@@ -161,7 +161,7 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
             Surface(
                 Modifier.fillMaxWidth().padding(top = 6.dp).heightIn(max = 380.dp),
                 shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 tonalElevation = 3.dp,
             ) {
                 val results = vm.searchResults
@@ -325,7 +325,7 @@ private fun SearchBar(
     Surface(
         Modifier.fillMaxWidth().height(52.dp),
         shape = RoundedCornerShape(26.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
         tonalElevation = 4.dp,
         shadowElevation = 6.dp,
     ) {

@@ -63,7 +63,8 @@ fun DetailCard(
     Surface(
         Modifier.fillMaxWidth().padding(horizontal = 10.dp).windowInsetsPadding(WindowInsets.navigationBars).padding(bottom = 8.dp),
         shape = RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+        // 半透明にすると背後の明るい地図が透けて文字が読みにくくなるため、少し濃い色で不透明にする
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 6.dp,
         shadowElevation = 10.dp,
     ) {
@@ -84,6 +85,7 @@ fun DetailCard(
                         entry.term,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = if (expanded) 3 else 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -107,6 +109,7 @@ fun DetailCard(
                 Text(
                     entry.desc,
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(top = 6.dp, end = 10.dp).let { if (expanded) it.verticalScroll(rememberScrollState()) else it },
                     maxLines = if (expanded) 12 else 2,
                     overflow = TextOverflow.Ellipsis,
