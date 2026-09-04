@@ -41,7 +41,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
@@ -155,7 +155,6 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
         SearchBar(
             query = vm.query,
             onQueryChange = { vm.updateQuery(it) },
-            onMenu = { vm.showList = true },
             onFilter = { vm.showFilter = true },
             filterActive = vm.isFilterActive(),
             onClear = { vm.updateQuery(""); focus.clearFocus() },
@@ -200,6 +199,9 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.Start) {
                 SmallFloatingActionButton(onClick = { vm.showAbout = true }, containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
                     Icon(Icons.Default.Info, contentDescription = "このアプリについて")
+                }
+                SmallFloatingActionButton(onClick = { vm.showList = true }, containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                    Icon(Icons.AutoMirrored.Filled.List, contentDescription = "用語一覧")
                 }
                 SmallFloatingActionButton(onClick = { vm.showBookmarks = true }, containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
                     Icon(Icons.Default.Bookmark, contentDescription = "ブックマーク一覧")
@@ -408,7 +410,6 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
 private fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
-    onMenu: () -> Unit,
     onFilter: () -> Unit,
     filterActive: Boolean,
     onClear: () -> Unit,
@@ -421,8 +422,9 @@ private fun SearchBar(
         tonalElevation = 4.dp,
         shadowElevation = 6.dp,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp)) {
-            IconButton(onClick = onMenu) { Icon(Icons.Default.Menu, contentDescription = "目次") }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, end = 4.dp)) {
+            Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.width(10.dp))
             Box(Modifier.weight(1f)) {
                 if (query.isEmpty()) {
                     Text("世界史の用語を検索(6,000語以上)", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -440,8 +442,6 @@ private fun SearchBar(
             }
             if (query.isNotEmpty()) {
                 IconButton(onClick = onClear) { Icon(Icons.Default.Close, contentDescription = "クリア") }
-            } else {
-                Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 8.dp))
             }
             IconButton(onClick = onFilter) {
                 Icon(
