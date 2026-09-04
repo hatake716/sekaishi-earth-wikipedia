@@ -209,10 +209,13 @@ private fun buildRows(entries: List<Entry>, sort: SortMode, catalog: Catalog): L
             out.add(Row.Item(e))
         }
     } else {
-        val sorted = entries.sortedWith(compareBy({ sortKey(it.term) }, { it.id }))
+        // 読み(yomi)があればそれを、なければ用語名を正規化した読みキーで並べ替える。
+        // キーは 1 回だけ計算する(比較のたびの再正規化を避ける)。
+        val keyed = entries.map { it to sortKey(if (it.yomi.isNotEmpty()) it.yomi else it.term) }
+            .sortedWith(compareBy({ it.second }, { it.first.id }))
         var last = ""
-        for (e in sorted) {
-            val ini = initialOf(e.term)
+        for ((e, key) in keyed) {
+            val ini = initialOfKey(key)
             if (ini != last) { out.add(Row.Header(ini)); last = ini }
             out.add(Row.Item(e))
         }
@@ -221,19 +224,17 @@ private fun buildRows(entries: List<Entry>, sort: SortMode, catalog: Catalog): L
 }
 
 /** 並べ替え用の読みキー: NFKC + ひらがな→カタカナ。 */
-private fun sortKey(term: String): String {
-    val n = java.text.Normalizer.normalize(term, java.text.Normalizer.Form.NFKC)
+private fun sortKey(s: String): String {
+    val n = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFKC)
     val sb = StringBuilder(n.length)
     for (ch in n) sb.append(if (ch in 'ぁ'..'ゖ') ch + 0x60 else ch)
     return sb.toString()
 }
 
-/** 五十音の行見出し。 */
-private fun initialOf(term: String): String {
-    val c = term.firstOrNull() ?: return "その他"
-    if (c in 'A'..'Z' || c in 'a'..'z' || c in 'Ａ'..'Ｚ' || c in 'ａ'..'ｚ' || c in '0'..'9' || c in '０'..'９') return "A〜Z・数字"
-    val kana = java.text.Normalizer.normalize(c.toString(), java.text.Normalizer.Form.NFKC).first()
-    val k = if (kana in 'ぁ'..'ゖ') kana + 0x60 else kana
+/** 正規化済みの読みキーから行見出しを導く(sortKey と同じ正規化結果を使い回す)。 */
+private fun initialOfKey(key: String): String {
+    val k = key.firstOrNull() ?: return "その他"
+    if (k in 'A'..'Z' || k in 'a'..'z' || k in '0'..'9') return "A〜Z・数字"
     return when (k) {
         in 'ァ'..'オ' -> "ア行"
         in 'カ'..'ゴ' -> "カ行"

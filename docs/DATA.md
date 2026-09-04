@@ -45,11 +45,17 @@
 - `tools/validate_titles.py` で全記事名を API で再確認し、リダイレクトを正規題名へ置換、存在しない/曖昧さ回避の題名を `title_problems.json` に出す。
   問題が残った語は追加のワークフローで修正する。
 
-## 6. 地球テクスチャ(`tools/make_tiles.sh`)
+## 5.5 読み(五十音順)の付与(`tools/fetch_yomi.py` → `tools/add_yomi.py`)
+
+漢字・記号始まりの用語について、Wikipedia 記事冒頭の「用語（よみ、…」から読み仮名を取得し、
+`entries.json` の各エントリ末尾に読み(ひらがな)を追加する。五十音順の一覧はこの読みで並べ替える。
+読みが取れない語は用語名を機械正規化したキーで並べる。
+
+## 6. 地球テクスチャ(`tools/make_tiles.sh` / `tools/make_level4.sh`)
 
 NASA Blue Marble Next Generation(`world.topo.bathy.200412.3x21600x10800.jpg`、パブリックドメイン)を
 ffmpeg で 2048×1024 / 4096×2048 / 8192×4096 / 16384×8192 に縮小し、1024px 四方に切り出す。
-`tiles/{level}/{x}_{y}.jpg`、level L は 2^(L+1) 列 × 2^L 行(合計 170 枚、約 23MB)。
+`tiles/{level}/{x}_{y}.jpg`、level L は 2^(L+1) 列 × 2^L 行。level 0〜3 に加え、`make_level4.sh` で level 4(32×16=512 枚)を追加(合計 682 枚、約 42MB)。
 
 ## entries.json の形式
 
@@ -60,7 +66,7 @@ ffmpeg で 2048×1024 / 4096×2048 / 8192×4096 / 16384×8192 に縮小し、102
   "entries": [
     [id, "用語", "別名1|別名2", "Wikipedia記事名", lat, lon, "地名", year, yearEnd, "年代表示",
      category(0=出来事,1=人物,2=国家,3=地名,4=文化,5=概念), importance(1-3), "要約(Wikipedia由来)",
-     periodIndex, regionIndex, exactTitle(1=用語そのものの記事,0=関連記事)]
+     periodIndex, regionIndex, exactTitle(1=用語そのものの記事,0=関連記事), yomi(読み・任意)]
   ]
 }
 ```

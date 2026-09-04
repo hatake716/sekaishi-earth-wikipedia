@@ -42,6 +42,8 @@ data class Entry(
     val regionIndex: Int,
     /** wikiTitle が用語そのものの記事なら true、関連記事で代用しているなら false。 */
     val exactTitle: Boolean = true,
+    /** 読み(ひらがな)。五十音順の並べ替えに使う。空なら用語名から機械正規化する。 */
+    val yomi: String = "",
 ) {
     private fun encodedTitle(): String =
         java.net.URLEncoder.encode(wikiTitle.replace(' ', '_'), "UTF-8").replace("+", "%20")
