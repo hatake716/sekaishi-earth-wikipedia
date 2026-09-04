@@ -34,7 +34,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Info
@@ -173,12 +176,12 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
                 } else {
                     LazyColumn {
                         items(results, key = { it.id }) { e ->
-                            SearchResultRow(e) {
+                            SearchResultRow(e, onClick = {
                                 focus.clearFocus()
                                 vm.updateQuery("")
                                 vm.select(e.id)
                                 globe?.flyToEntry(e, GlobeView.ENTRY_ALTITUDE)
-                            }
+                            })
                             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                         }
                     }
@@ -197,6 +200,9 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.Start) {
                 SmallFloatingActionButton(onClick = { vm.showAbout = true }, containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
                     Icon(Icons.Default.Info, contentDescription = "このアプリについて")
+                }
+                SmallFloatingActionButton(onClick = { vm.showBookmarks = true }, containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                    Icon(Icons.Default.Bookmark, contentDescription = "ブックマーク一覧")
                 }
                 SmallFloatingActionButton(
                     onClick = {
@@ -321,6 +327,8 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
             onYoutube = { vm.openYoutube(e) },
             onZoom = { globe?.flyToEntry(e, 0.012) },
             onShare = { shareEntry(context, e) },
+            bookmarked = e.id in vm.bookmarkIds,
+            onToggleBookmark = { vm.toggleBookmark(e.id) },
         )
     }
     if (selected != null) {
@@ -337,10 +345,10 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
             text = {
                 LazyColumn(Modifier.heightIn(max = 420.dp)) {
                     items(candidates, key = { it.id }) { e ->
-                        SearchResultRow(e) {
+                        SearchResultRow(e, onClick = {
                             vm.pickCandidates = emptyList()
                             vm.select(e.id)
-                        }
+                        })
                         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                     }
                 }
@@ -352,14 +360,40 @@ private fun BoxScope.GlobeScreen(vm: MainViewModel) {
         FilterSheet(vm = vm, catalog = catalog, onDismiss = { vm.showFilter = false })
     }
     if (vm.showList) {
-        ListScreen(
+        EntryListScreen(
             catalog = catalog,
+            source = catalog.entries,
+            title = "用語一覧",
+            emptyMessage = "用語がありません",
+            readIds = vm.readIds,
+            bookmarkIds = vm.bookmarkIds,
             onClose = { vm.showList = false },
             onSelect = { e ->
                 vm.showList = false
                 vm.select(e.id)
                 globe?.flyToEntry(e, GlobeView.ENTRY_ALTITUDE)
             },
+            onToggleBookmark = { vm.toggleBookmark(it) },
+        )
+    }
+    if (vm.showBookmarks) {
+        val bookmarked = remember(vm.bookmarkIds, catalog) {
+            vm.bookmarkIds.mapNotNull { catalog.byId(it) }
+        }
+        EntryListScreen(
+            catalog = catalog,
+            source = bookmarked,
+            title = "ブックマーク",
+            emptyMessage = "ブックマークはまだありません。用語の詳細から☆で追加できます。",
+            readIds = vm.readIds,
+            bookmarkIds = vm.bookmarkIds,
+            onClose = { vm.showBookmarks = false },
+            onSelect = { e ->
+                vm.showBookmarks = false
+                vm.select(e.id)
+                globe?.flyToEntry(e, GlobeView.ENTRY_ALTITUDE)
+            },
+            onToggleBookmark = { vm.toggleBookmark(it) },
         )
     }
     if (vm.showAbout) {
@@ -421,18 +455,51 @@ private fun SearchBar(
 }
 
 @Composable
-fun SearchResultRow(e: Entry, onClick: () -> Unit) {
+fun SearchResultRow(
+    e: Entry,
+    onClick: () -> Unit,
+    read: Boolean = false,
+    bookmarked: Boolean? = null,
+    onToggleBookmark: (() -> Unit)? = null,
+) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(start = 14.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(10.dp).background(e.category.color, CircleShape))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(e.term, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (read) {
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = "既読",
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                }
+                Text(
+                    e.term,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = if (read) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             val sub = listOf(e.eraLabel(), e.place).filter { it.isNotBlank() }.joinToString(" ・ ")
             if (sub.isNotBlank()) {
                 Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        if (bookmarked != null && onToggleBookmark != null) {
+            IconButton(onClick = onToggleBookmark) {
+                Icon(
+                    if (bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                    contentDescription = if (bookmarked) "ブックマーク解除" else "ブックマーク",
+                    tint = if (bookmarked) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

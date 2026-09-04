@@ -170,7 +170,7 @@ class Camera {
     }
 
     companion object {
-        const val MIN_ALT = 0.0025
+        const val MIN_ALT = 0.0019
         const val MAX_ALT = 9.0
         val MAX_LAT: Double = Math.toRadians(89.0)
 

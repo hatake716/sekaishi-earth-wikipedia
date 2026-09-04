@@ -10,8 +10,11 @@ import androidx.lifecycle.viewModelScope
 import io.github.hatake716.sekaishiearth.data.Catalog
 import io.github.hatake716.sekaishiearth.data.Category
 import io.github.hatake716.sekaishiearth.data.Entry
+import io.github.hatake716.sekaishiearth.data.UserDataRepository
 import io.github.hatake716.sekaishiearth.globe.MarkerFilter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -33,7 +36,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var webTitle by mutableStateOf("")
     var showFilter by mutableStateOf(false)
     var showList by mutableStateOf(false)
+    var showBookmarks by mutableStateOf(false)
     var showAbout by mutableStateOf(false)
+
+    /** 既読(一度でも詳細を開いた)用語の id 集合。 */
+    var readIds by mutableStateOf<Set<Int>>(emptySet())
+        private set
+
+    /** ブックマークした用語の id リスト(追加順)。 */
+    var bookmarkIds by mutableStateOf<List<Int>>(emptyList())
+        private set
+
+    private val userData = UserDataRepository(app)
 
     /** 年代の数値入力ダイアログ。null=非表示、true=上端(新しい年)編集、false=下端(古い年)編集。 */
     var editYearUpper by mutableStateOf<Boolean?>(null)
@@ -59,6 +73,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 loadError = e.toString()
             }
         }
+        // 既読・ブックマークを DataStore から監視
+        userData.readIds.onEach { readIds = it }.launchIn(viewModelScope)
+        userData.bookmarkIds.onEach { bookmarkIds = it }.launchIn(viewModelScope)
+    }
+
+    fun isRead(id: Int): Boolean = id in readIds
+    fun isBookmarked(id: Int): Boolean = id in bookmarkIds
+
+    fun toggleBookmark(id: Int) {
+        viewModelScope.launch { userData.toggleBookmark(id) }
+    }
+
+    fun removeBookmark(id: Int) {
+        viewModelScope.launch { userData.removeBookmark(id) }
     }
 
     val selectedEntry: Entry? get() = catalog?.byId(selectedId)
@@ -66,6 +94,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun select(id: Int) {
         selectedId = id
         detailExpanded = false
+        // 詳細を開いた(地球儀・一覧・検索いずれからでも)時点で既読にする
+        if (id >= 0 && id !in readIds) viewModelScope.launch { userData.markRead(id) }
     }
 
     fun clearSelection() {

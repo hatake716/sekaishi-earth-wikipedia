@@ -200,8 +200,8 @@ class TileManager(private val assets: AssetManager) {
     companion object {
         const val TAG = "TileManager"
         const val TILE_SIZE = 1024
-        const val MAX_LEVEL = 3
-        const val MAX_RESIDENT = 36
+        const val MAX_LEVEL = 4
+        const val MAX_RESIDENT = 48
         const val MAX_IN_FLIGHT = 6
     }
 }

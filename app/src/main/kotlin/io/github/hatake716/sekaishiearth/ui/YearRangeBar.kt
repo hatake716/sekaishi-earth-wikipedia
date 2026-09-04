@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,11 +58,18 @@ fun YearRangeBar(
     val loInit = if (yearMin == Int.MIN_VALUE) 0f else toFrac(yearMin)
     val hiInit = if (yearMax == Int.MAX_VALUE) 1f else toFrac(yearMax)
 
-    // ドラッグ中の一時値(0..1、0=最古/下端, 1=最新/上端)。lo <= hi を保つ。
-    var lo by remember(yearMin, yearMax) { mutableFloatStateOf(loInit) }
-    var hi by remember(yearMin, yearMax) { mutableFloatStateOf(hiInit) }
+    // 内部状態(0..1、0=最古/下端, 1=最新/上端)。lo <= hi を保つ。
+    // ドラッグ中は自前の値を優先し、外部(フィルタ)の変化はドラッグしていない時だけ取り込む。
+    var lo by remember { mutableFloatStateOf(loInit) }
+    var hi by remember { mutableFloatStateOf(hiInit) }
+    var dragging by remember { mutableStateOf(false) }
     var trackHeightPx by remember { mutableFloatStateOf(1f) }
     val density = LocalDensity.current
+
+    // 外部から yearMin/yearMax が変わったら(数値入力・リセット等)、ドラッグ中でなければ同期する。
+    androidx.compose.runtime.LaunchedEffect(yearMin, yearMax) {
+        if (!dragging) { lo = loInit; hi = hiInit }
+    }
 
     fun yearAt(frac: Float): Int = (minYear + frac * span).roundToInt()
 
@@ -114,14 +122,21 @@ fun YearRangeBar(
                     var draggingLo = false
                     detectDragGestures(
                         onDragStart = { pos ->
+                            dragging = true
                             val f = yToFrac(pos.y)
+                            // 掴んだ側を即座にその位置へ寄せ、指の下にハンドルを付ける
                             draggingLo = abs(f - lo) <= abs(f - hi)
+                            if (draggingLo) lo = f.coerceIn(0f, hi) else hi = f.coerceIn(lo, 1f)
+                            commit()
                         },
-                        onDragEnd = { commit() },
+                        onDragEnd = { dragging = false; commit() },
+                        onDragCancel = { dragging = false; commit() },
                         onDrag = { change, _ ->
                             change.consume()
                             val f = yToFrac(change.position.y)
                             if (draggingLo) lo = f.coerceIn(0f, hi) else hi = f.coerceIn(lo, 1f)
+                            // ドラッグ中も即時反映して指に追従させる
+                            commit()
                         },
                     )
                 },

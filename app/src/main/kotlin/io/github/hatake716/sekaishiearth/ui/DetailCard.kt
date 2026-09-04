@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -59,6 +61,8 @@ fun DetailCard(
     onYoutube: () -> Unit,
     onZoom: () -> Unit,
     onShare: () -> Unit,
+    bookmarked: Boolean,
+    onToggleBookmark: () -> Unit,
 ) {
     Surface(
         Modifier.fillMaxWidth().padding(horizontal = 10.dp).windowInsetsPadding(WindowInsets.navigationBars).padding(bottom = 8.dp),
@@ -92,6 +96,13 @@ fun DetailCard(
                     if (entry.aliases.isNotEmpty()) {
                         Text(entry.aliases.joinToString(" / "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
+                }
+                IconButton(onClick = onToggleBookmark) {
+                    Icon(
+                        if (bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                        contentDescription = if (bookmarked) "ブックマーク解除" else "ブックマーク",
+                        tint = if (bookmarked) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 IconButton(onClick = onToggleExpand) {
                     Icon(if (expanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess, contentDescription = if (expanded) "折りたたむ" else "詳細")
