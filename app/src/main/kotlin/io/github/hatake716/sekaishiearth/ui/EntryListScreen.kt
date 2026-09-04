@@ -19,12 +19,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -74,13 +76,25 @@ fun EntryListScreen(
     BackHandler(onBack = onClose)
     var sort by rememberSaveable { mutableStateOf(SortMode.ERA) }
     var showFilterRow by rememberSaveable { mutableStateOf(false) }
+    var showSearch by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
     var catFilter by remember { mutableStateOf<Set<Category>>(Category.entries.toSet()) }
     var regionFilter by remember { mutableStateOf<Set<Int>?>(null) } // null=全地域
     val listState = rememberLazyListState()
 
-    val rows = remember(source, sort, catFilter, regionFilter, catalog) {
+    val rows = remember(source, sort, catFilter, regionFilter, query, catalog) {
+        val q = Catalog.normalize(query)
         val filtered = source.filter { e ->
-            e.category in catFilter && (regionFilter == null || e.regionIndex in regionFilter!!)
+            if (e.category !in catFilter) return@filter false
+            if (regionFilter != null && e.regionIndex !in regionFilter!!) return@filter false
+            if (q.isNotEmpty()) {
+                val hit = Catalog.normalize(e.term).contains(q) ||
+                    e.aliases.any { Catalog.normalize(it).contains(q) } ||
+                    Catalog.normalize(e.wikiTitle).contains(q) ||
+                    Catalog.normalize(e.place).contains(q)
+                if (!hit) return@filter false
+            }
+            true
         }
         buildRows(filtered, sort, catalog)
     }
@@ -93,6 +107,16 @@ fun EntryListScreen(
                 title = { Text("$title(${"%,d".format(source.size)})", style = MaterialTheme.typography.titleMedium) },
                 navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.Default.Close, contentDescription = "閉じる") } },
                 actions = {
+                    IconButton(onClick = {
+                        showSearch = !showSearch
+                        if (!showSearch) query = ""
+                    }) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "この一覧内を検索",
+                            tint = if (query.isNotEmpty()) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                     IconButton(onClick = { showFilterRow = !showFilterRow }) {
                         Icon(
                             Icons.Default.FilterList,
@@ -110,6 +134,22 @@ fun EntryListScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
+            if (showSearch) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (query.isNotEmpty()) {
+                            IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, contentDescription = "クリア") }
+                        }
+                    },
+                    placeholder = { Text("この一覧内を検索") },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
                 SegmentedButton(selected = sort == SortMode.ERA, onClick = { sort = SortMode.ERA }, shape = SegmentedButtonDefaults.itemShape(0, 2)) { Text("年代順") }
                 SegmentedButton(selected = sort == SortMode.KANA, onClick = { sort = SortMode.KANA }, shape = SegmentedButtonDefaults.itemShape(1, 2)) { Text("五十音順") }
@@ -158,6 +198,12 @@ fun EntryListScreen(
 
             if (source.isEmpty()) {
                 Text(emptyMessage, Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else if (shownCount == 0) {
+                Text(
+                    if (query.isNotEmpty()) "「$query」に一致する用語がありません" else "条件に一致する用語がありません",
+                    Modifier.padding(24.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             } else {
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                     items(
