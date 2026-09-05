@@ -7,7 +7,7 @@
 | 項目 | 状態 |
 |---|---|
 | ビルド形式 | 署名済み AAB(`./gradlew bundleRelease`) |
-| バージョン | versionCode 3 / versionName 1.2.0 |
+| バージョン | versionCode 4 / versionName 1.3.0 |
 | 署名 | ローカルのアップロード鍵(`sekaishi-earth-release.jks`、`.gitignore` 済み)|
 | compileSdk / targetSdk | 36 |
 | minSdk | 30(Android 11 以上)|
