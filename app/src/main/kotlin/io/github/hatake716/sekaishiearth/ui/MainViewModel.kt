@@ -136,12 +136,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         return pool.random()
     }
 
-    fun resetFilter() {
-        filter = MarkerFilter()
+    /** 絞り込みシートの「全選択」。分類・地域を全項目チェック状態にする(年代はこのシートの対象外なので触らない)。 */
+    fun selectAllFilter() {
+        val regionCount = catalog?.regions?.size ?: 0
+        filter = filter.copy(categories = Category.entries.toSet(), regions = (0 until regionCount).toSet())
+    }
+
+    /** 絞り込みシートの「全解除」。分類・地域のチェックを全部外す＝絞り込みなし(年代は触らない)。 */
+    fun deselectAllFilter() {
+        filter = filter.copy(categories = emptySet(), regions = emptySet())
     }
 
     fun isFilterActive(): Boolean {
         val f = filter
-        return f.yearMin != Int.MIN_VALUE || f.yearMax != Int.MAX_VALUE || f.categories.size != Category.entries.size || f.regions != null
+        return f.yearFilterActive() || f.categoryFilterActive() || f.regionFilterActive(catalog?.regions?.size ?: 0)
     }
 }

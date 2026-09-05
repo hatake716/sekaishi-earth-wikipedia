@@ -83,4 +83,38 @@ class CatalogTest {
         val rg0 = MarkerFilter(regions = setOf(0))
         assertTrue(rg0.accepts(catalog.byId(0)!!))
     }
+
+    @Test
+    fun emptySelectionMeansNoFilter() {
+        // 起動直後(何もチェックしていない)は全件表示で、絞り込み中とは扱わない
+        val f = MarkerFilter()
+        assertTrue(catalog.entries.all { f.accepts(it) })
+        assertTrue(!f.categoryFilterActive())
+        assertTrue(!f.regionFilterActive(catalog.regions.size))
+        assertTrue(!f.yearFilterActive())
+    }
+
+    @Test
+    fun fullSelectionEqualsNoFilter() {
+        // 「全選択」で全項目を明示的に入れても、全件表示で絞り込み中ではない
+        val f = MarkerFilter(categories = Category.entries.toSet(), regions = catalog.regions.indices.toSet())
+        assertTrue(catalog.entries.all { f.accepts(it) })
+        assertTrue(!f.categoryFilterActive())
+        assertTrue(!f.regionFilterActive(catalog.regions.size))
+    }
+
+    @Test
+    fun partialSelectionIsActiveAndFilters() {
+        val c = MarkerFilter(categories = setOf(Category.PERSON))
+        assertTrue(c.categoryFilterActive())
+        assertTrue(!c.regionFilterActive(catalog.regions.size)) // 地域は未選択=絞っていない
+        assertEquals(2, catalog.entries.count { c.accepts(it) })  // 人物は id 0,1 の2件
+
+        val r = MarkerFilter(regions = setOf(1))
+        assertTrue(r.regionFilterActive(catalog.regions.size))
+        assertEquals(0, catalog.entries.count { r.accepts(it) })  // 全データは region=0
+
+        val both = MarkerFilter(categories = setOf(Category.PERSON), regions = setOf(0))
+        assertEquals(2, catalog.entries.count { both.accepts(it) })
+    }
 }

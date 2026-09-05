@@ -78,15 +78,16 @@ fun EntryListScreen(
     var showFilterRow by rememberSaveable { mutableStateOf(false) }
     var showSearch by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
-    var catFilter by remember { mutableStateOf<Set<Category>>(Category.entries.toSet()) }
-    var regionFilter by remember { mutableStateOf<Set<Int>?>(null) } // null=全地域
+    // チェックした項目だけ表示。空(何もチェックしていない)は絞り込みなし＝全件。地球儀側の MarkerFilter と同じ意味。
+    var catFilter by remember { mutableStateOf<Set<Category>>(emptySet()) }
+    var regionFilter by remember { mutableStateOf<Set<Int>>(emptySet()) }
     val listState = rememberLazyListState()
 
     val rows = remember(source, sort, catFilter, regionFilter, query, catalog) {
         val q = Catalog.normalize(query)
         val filtered = source.filter { e ->
-            if (e.category !in catFilter) return@filter false
-            if (regionFilter != null && e.regionIndex !in regionFilter!!) return@filter false
+            if (catFilter.isNotEmpty() && e.category !in catFilter) return@filter false
+            if (regionFilter.isNotEmpty() && e.regionIndex !in regionFilter) return@filter false
             if (q.isNotEmpty()) {
                 val hit = Catalog.normalize(e.term).contains(q) ||
                     e.aliases.any { Catalog.normalize(it).contains(q) } ||
@@ -121,7 +122,11 @@ fun EntryListScreen(
                         Icon(
                             Icons.Default.FilterList,
                             contentDescription = "絞り込み",
-                            tint = if (catFilter.size != Category.entries.size || regionFilter != null) {
+                            // 一部だけ選択しているときだけ「絞り込み中」。空も全選択も絞っていない扱い。
+                            tint = if (
+                                (catFilter.isNotEmpty() && catFilter.size < Category.entries.size) ||
+                                (regionFilter.isNotEmpty() && regionFilter.size < catalog.regions.size)
+                            ) {
                                 MaterialTheme.colorScheme.secondary
                             } else {
                                 MaterialTheme.colorScheme.onSurface
@@ -156,6 +161,21 @@ fun EntryListScreen(
             }
 
             if (showFilterRow) {
+                // 全選択 / 全解除(地球儀の絞り込みシートと同じ操作)
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    androidx.compose.material3.TextButton(onClick = {
+                        catFilter = Category.entries.toSet()
+                        regionFilter = catalog.regions.indices.toSet()
+                    }) { Text("全選択", style = MaterialTheme.typography.labelMedium) }
+                    androidx.compose.material3.TextButton(onClick = {
+                        catFilter = emptySet()
+                        regionFilter = emptySet()
+                    }) { Text("全解除", style = MaterialTheme.typography.labelMedium) }
+                }
                 // 分類チップ(横スクロール)
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
@@ -177,11 +197,9 @@ fun EntryListScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     for ((i, rg) in catalog.regions.withIndex()) {
-                        val on = regionFilter == null || i in regionFilter!!
+                        val on = i in regionFilter
                         FilterChip(selected = on, onClick = {
-                            val cur = regionFilter?.toMutableSet() ?: catalog.regions.indices.toMutableSet()
-                            if (on) cur.remove(i) else cur.add(i)
-                            regionFilter = if (cur.size == catalog.regions.size) null else cur
+                            regionFilter = regionFilter.toMutableSet().apply { if (on) remove(i) else add(i) }
                         }, label = { Text(rg, style = MaterialTheme.typography.labelSmall) })
                     }
                 }

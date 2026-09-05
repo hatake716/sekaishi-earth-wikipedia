@@ -7,16 +7,28 @@ import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.sin
 
-/** 表示フィルタ。regions/periods は null なら全件表示。 */
+/**
+ * 表示フィルタ。
+ * categories/regions は「チェックした項目だけ表示」。何もチェックしていない(空)ときは絞り込みなし＝全件表示。
+ * 「全選択」で全項目を明示的に入れた状態と、「全解除」の空集合は、どちらも全件表示になる。
+ */
 data class MarkerFilter(
     val yearMin: Int = Int.MIN_VALUE,
     val yearMax: Int = Int.MAX_VALUE,
-    val categories: Set<Category> = Category.entries.toSet(),
-    val regions: Set<Int>? = null,
+    val categories: Set<Category> = emptySet(),
+    val regions: Set<Int> = emptySet(),
 ) {
+    /** 分類で実際に絞られているか(一部だけ選択)。空と全選択はどちらも「絞っていない」。 */
+    fun categoryFilterActive(): Boolean = categories.isNotEmpty() && categories.size < Category.entries.size
+
+    /** 地域で実際に絞られているか(一部だけ選択)。regionCount は地域の総数。 */
+    fun regionFilterActive(regionCount: Int): Boolean = regions.isNotEmpty() && regions.size < regionCount
+
+    fun yearFilterActive(): Boolean = yearMin != Int.MIN_VALUE || yearMax != Int.MAX_VALUE
+
     fun accepts(e: Entry): Boolean {
-        if (e.category !in categories) return false
-        if (regions != null && e.regionIndex !in regions) return false
+        if (categories.isNotEmpty() && e.category !in categories) return false
+        if (regions.isNotEmpty() && e.regionIndex !in regions) return false
         if (yearMin != Int.MIN_VALUE || yearMax != Int.MAX_VALUE) {
             val y = e.year ?: return true // 年不明は常に表示
             val ye = e.yearEnd ?: y

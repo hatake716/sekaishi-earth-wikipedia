@@ -66,7 +66,7 @@ fun YearRangeBar(
     var trackHeightPx by remember { mutableFloatStateOf(1f) }
     val density = LocalDensity.current
 
-    // 外部から yearMin/yearMax が変わったら(数値入力・リセット等)、ドラッグ中でなければ同期する。
+    // 外部から yearMin/yearMax が変わったら(数値入力等)、ドラッグ中でなければ同期する。
     androidx.compose.runtime.LaunchedEffect(yearMin, yearMax) {
         if (!dragging) { lo = loInit; hi = hiInit }
     }
